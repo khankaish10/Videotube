@@ -117,7 +117,8 @@ const loginUser = asyncHandler( async (req, res) => {
     }
 
     const existedUser = await User.findOne({$or: [{userName}, {email}]})
-                            .select("-password -refreshToken");
+    .select("-password -refreshToken");
+    
     if(!existedUser){
         throw new ApiError(400, "User doesnot exist")
     }
@@ -128,8 +129,6 @@ const loginUser = asyncHandler( async (req, res) => {
     // generate access/refreshToken
 
     const {accessToken, refreshToken} = await generateAccessAndRefreshToken(existedUser._id);
-
-
 
     const options = {
         httpOnly: true,
