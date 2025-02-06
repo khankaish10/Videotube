@@ -159,7 +159,7 @@ const logoutUser = asyncHandler( async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {refreshToken: undefined}
+            $unset: {refreshToken: 1}
         },
         {new: true}
     )
@@ -298,13 +298,13 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
 })
 
 const getUserChannelProfile = asyncHandler(async(req, res) => {
-    const {userName} = req.params;
-    if(!userName) throw new ApiError(400, "username is missing")
+    const {username} = req.params;
+    if(!username) throw new ApiError(400, "username is missing")
 
     const channel = await User.aggregate([
         {
             $match: {
-                userName: userName?.toLowerCase()
+                userName: username?.toLowerCase()
             }
         },
         {
@@ -343,7 +343,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
         {
             $project: {
                 fullName: 1,
-                userName: 1,
+                username: 1,
                 avatar: 1,
                 subscribersCount: 1,
                 channelsSubscribedToCount: 1,
@@ -368,50 +368,62 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
         )
     )
 
-
-
-
-    
-    
-    // await User.aggregate([
-    //     {
-    //         $match: {
-    //             _id: new mongoose.Types.ObjectId(req.user._id)
-    //         }
-    //     },
-    //     {
-    //         $lookup: {
-    //             from: "videos",
-    //             localField: "watchHistory",
-    //             foreignField: "_id",
-    //             as: "WatchHistoty",
-    //             pipeline: [
-    //                 {
-    //                     $lookup: {
-    //                         from: "users",
-    //                         localField: "owner",
-    //                         foreignField: "_id",
-    //                         as: "owner",
-    //                         pipeline: [{
-    //                             $project: {
-    //                                 fullName: 1,
-    //                                 userName: 1, 
-    //                                 avatar: 1
-    //                                 }
-    //                             }
-    //                         ]
-    //                     }
-    //                 }
-    //             ]
-    //         },
-            
-    //     }
-    // ])
-
 })
 
 
+const getWatchHistory = asyncHandler(async(req, res) => {
 
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user?._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        userName: 1,
+                                        avatar: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields: {
+                            owner: {
+                                $first: "$owner"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    return res
+    .status(200)
+    .json(new ApiResponse(
+        200,
+        user[0].watchHistory,
+        "watch history fetched successfully"
+    ))
+
+})
 
 export {
     registerUser,
@@ -423,4 +435,5 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
+    getWatchHistory,
 }

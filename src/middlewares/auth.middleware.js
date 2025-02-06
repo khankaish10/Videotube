@@ -21,7 +21,7 @@ const verifyJwt = async(req, res, next) => {
         next();
 
     } catch (error) {
-        throw new ApiError(400, error?.message || "Unauthorized access!")
+        throw new ApiError(400, "Unauthorized access!")
     }
 
 }
